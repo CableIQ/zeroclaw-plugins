@@ -9,7 +9,29 @@
         "tool"
       ],
       "url": "https://github.com/zeroclaw-labs/zeroclaw-plugins/releases/download/plugins/image-gen-fal-0.1.0.zip",
-      "sha256": "4fbab55fe5791e7ca5f8d7670b6d2da19facfb4729eac599dfa29cf8e31cc849"
+      "sha256": "727b07c8b358385f8fee3253c2840cfd9b3093598fa5eeea0acd88db2a47f222"
+    },
+    {
+      "name": "languagetool",
+      "version": "0.1.0",
+      "description": "Check text for grammar, spelling, and style via LanguageTool (self-hostable)",
+      "author": "ZeroClaw Labs",
+      "capabilities": [
+        "tool"
+      ],
+      "url": "https://github.com/zeroclaw-labs/zeroclaw-plugins/releases/download/plugins/languagetool-0.1.0.zip",
+      "sha256": "e69b8d9552ea42f145a4ab4a93d480a3ac486596de51623e0ab5b1e7493e0e1a"
+    },
+    {
+      "name": "sd-webui",
+      "version": "0.1.0",
+      "description": "Generate images locally via your own Stable Diffusion WebUI (AUTOMATIC1111)",
+      "author": "ZeroClaw Labs",
+      "capabilities": [
+        "tool"
+      ],
+      "url": "https://github.com/zeroclaw-labs/zeroclaw-plugins/releases/download/plugins/sd-webui-0.1.0.zip",
+      "sha256": "9d6ffaf1d00d388fe63ff3b21116e67e27b99f90dcc5e2dfe0e6b86138f8b866"
     }
   ]
 }
