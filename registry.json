@@ -120,6 +120,17 @@
       ],
       "url": "https://github.com/zeroclaw-labs/zeroclaw-plugins/releases/download/plugins/wechat-0.1.0.zip",
       "sha256": "a85ae6f57d50f67fb668671a1fdc7580334c66f6204d874a854a5c1133a15fdc"
+    },
+    {
+      "name": "wecom",
+      "version": "0.1.0",
+      "description": "Send-only WeCom Bot Webhook channel plugin for ZeroClaw over wasi:http.",
+      "author": "JordanTheJet",
+      "capabilities": [
+        "channel"
+      ],
+      "url": "https://github.com/zeroclaw-labs/zeroclaw-plugins/releases/download/plugins/wecom-0.1.0.zip",
+      "sha256": "154f669e9d3689ffb31c1ac97ac21a39dd35fb2f9651ab4653c3829d1656ab53"
     }
   ]
 }
