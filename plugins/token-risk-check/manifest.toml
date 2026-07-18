@@ -1,0 +1,7 @@
+name = "token-risk-check"
+version = "0.1.0"
+description = "Assess Solana token risk: mint authority, freeze authority, holder concentration, Token-2022 extensions, transfer fees, permanent delegate"
+author = "ZeroClaw Labs"
+wasm_path = "token_risk_check.wasm"
+capabilities = ["tool"]
+permissions = ["config_read", "network"]

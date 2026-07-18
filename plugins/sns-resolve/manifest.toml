@@ -1,0 +1,7 @@
+name = "sns-resolve"
+version = "0.1.0"
+description = "Resolve .sol domain names to Solana wallet addresses via the SNS on-chain program"
+author = "ZeroClaw Labs"
+wasm_path = "sns_resolve.wasm"
+capabilities = ["tool"]
+permissions = ["config_read", "network"]

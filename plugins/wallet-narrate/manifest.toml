@@ -1,0 +1,7 @@
+name = "wallet-narrate"
+version = "0.1.0"
+description = "Narrate Solana wallet activity in natural language: SOL transfers, SPL token transfers, swaps on Jupiter, and program interactions"
+author = "ZeroClaw Labs"
+wasm_path = "wallet_narrate.wasm"
+capabilities = ["tool"]
+permissions = ["config_read", "network"]
