@@ -1,16 +1,4 @@
-//! A ZeroClaw WIT tool plugin: `token-risk-check`.
-//!
-//! Given a Solana SPL token mint address, queries on-chain data and returns a
-//! risk assessment: RED (dangerous), AMBER (caution), or GREEN (safe).
-//!
-//! Checks performed: mint authority, freeze authority, holder concentration
-//! (top 10 holders %), Token-2022 extensions, transfer hooks, transfer fees,
-//! permanent delegate.
-//!
-//! Build:  rustup target add wasm32-wasip2
-//!         cargo build --target wasm32-wasip2 --release
-
-pub mod risk;
+pub mod lending;
 
 #[cfg(target_family = "wasm")]
 mod component {
@@ -21,57 +9,51 @@ mod component {
     });
 
     use std::collections::HashMap;
-
-    use crate::risk::{assess_token, RiskConfig};
+    use crate::lending::{check_lending_health, LendingConfig};
     use exports::zeroclaw::plugin::plugin_info::Guest as PluginInfo;
     use exports::zeroclaw::plugin::tool::{Guest as Tool, ToolResult};
     use zeroclaw::plugin::logging::{
         log_record, LogLevel, PluginAction, PluginEvent, PluginOutcome,
     };
-
     use solana_client_wasip2::RpcClient;
 
-    struct TokenRiskCheck;
+    struct LendingHealth;
 
-    const PLUGIN_NAME: &str = "token-risk-check";
+    const PLUGIN_NAME: &str = "lending-health";
     const PLUGIN_VERSION: &str = env!("CARGO_PKG_VERSION");
-    const TOOL_NAME: &str = "token-risk-check";
+    const TOOL_NAME: &str = "lending-health";
 
     #[derive(serde::Deserialize)]
     struct ExecuteArgs {
-        mint: String,
+        wallet: String,
+        #[serde(default = "default_threshold")]
+        threshold: f64,
         #[serde(rename = "__config", default)]
         config: HashMap<String, String>,
     }
 
-    impl PluginInfo for TokenRiskCheck {
+    fn default_threshold() -> f64 { 1.15 }
+
+    impl PluginInfo for LendingHealth {
         fn plugin_name() -> String { PLUGIN_NAME.to_string() }
         fn plugin_version() -> String { PLUGIN_VERSION.to_string() }
     }
 
-    impl Tool for TokenRiskCheck {
+    impl Tool for LendingHealth {
         fn name() -> String { TOOL_NAME.to_string() }
-
         fn description() -> String {
-            "Assess risk of a Solana SPL token by mint address. \
-             Checks mint authority, freeze authority, holder concentration, \
-             Token-2022 extensions, transfer hooks, transfer fees, and \
-             permanent delegate. Returns RED/AMBER/GREEN rating with specific reasons."
-                .to_string()
+            "Check lending health factors across Kamino, MarginFi, and Drift. \
+             Returns HEALTHY, WARNING (below threshold), or CRITICAL (below 1.0).".to_string()
         }
-
         fn parameters_schema() -> String {
             serde_json::json!({
                 "type": "object",
                 "properties": {
-                    "mint": {
-                        "type": "string",
-                        "description": "The Solana SPL token mint address to assess."
-                    }
+                    "wallet": { "type": "string", "description": "Solana wallet address to check lending positions." },
+                    "threshold": { "type": "number", "description": "Health factor threshold for WARNING (default: 1.15)." }
                 },
-                "required": ["mint"]
-            })
-            .to_string()
+                "required": ["wallet"]
+            }).to_string()
         }
 
         fn execute(args: String) -> Result<ToolResult, String> {
@@ -83,22 +65,19 @@ mod component {
                 }
             };
 
-            let rpc_url = parsed
-                .config
-                .get("rpc_url")
+            let rpc_url = parsed.config.get("rpc_url")
                 .filter(|v| !v.is_empty())
                 .cloned()
-                .unwrap_or_else(|| crate::risk::DEFAULT_RPC_URL.to_string());
+                .unwrap_or_else(|| crate::lending::DEFAULT_RPC_URL.to_string());
 
             let client = RpcClient::new(&rpc_url);
-
-            match assess_token(&parsed.mint, &client) {
-                Ok(assessment) => {
-                    emit(PluginAction::Complete, PluginOutcome::Success, "token assessed", None);
-                    Ok(ToolResult { success: true, output: assessment, error: None })
+            match check_lending_health(&parsed.wallet, parsed.threshold, &client) {
+                Ok(output) => {
+                    emit(PluginAction::Complete, PluginOutcome::Success, "checked lending health", None);
+                    Ok(ToolResult { success: true, output, error: None })
                 }
                 Err(e) => {
-                    emit(PluginAction::Fail, PluginOutcome::Failure, "assessment failed", None);
+                    emit(PluginAction::Fail, PluginOutcome::Failure, "health check failed", None);
                     Ok(ToolResult { success: false, output: String::new(), error: Some(e) })
                 }
             }
@@ -107,7 +86,7 @@ mod component {
 
     fn emit(action: PluginAction, outcome: PluginOutcome, message: &str, _extra: Option<usize>) {
         log_record(LogLevel::Info, &PluginEvent {
-            function_name: "token_risk_check::tool::execute".to_string(),
+            function_name: "lending_health::tool::execute".to_string(),
             action,
             outcome: Some(outcome),
             duration_ms: None,
@@ -116,5 +95,5 @@ mod component {
         });
     }
 
-    export!(TokenRiskCheck);
+    export!(LendingHealth);
 }

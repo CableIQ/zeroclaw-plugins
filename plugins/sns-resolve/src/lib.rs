@@ -1,7 +1,7 @@
 //! A ZeroClaw WIT tool plugin: `sns-resolve`.
 //!
 //! Resolves `.sol` domain names to Solana wallet addresses by querying the
-//! SNS (Solana Name Service) on-chain program at `namesLPneVptA9Z18rQ5D8hUqE7u6s`.
+//! SNS (Solana Name Service) on-chain program.
 //!
 //! The pure resolution core lives in [`resolve`] with no wasm dependency, so it
 //! compiles and tests on the host with a plain `cargo test`; the wasm component
@@ -28,6 +28,8 @@ mod component {
     use zeroclaw::plugin::logging::{
         log_record, LogLevel, PluginAction, PluginEvent, PluginOutcome,
     };
+
+    use solana_client_wasip2::RpcClient;
 
     struct SnsResolve;
 
@@ -82,12 +84,7 @@ mod component {
             let parsed: ExecuteArgs = match serde_json::from_str(&args) {
                 Ok(a) => a,
                 Err(e) => {
-                    emit(
-                        PluginAction::Fail,
-                        PluginOutcome::Failure,
-                        "invalid arguments",
-                        None,
-                    );
+                    emit(PluginAction::Fail, PluginOutcome::Failure, "invalid arguments", None);
                     return Ok(ToolResult {
                         success: false,
                         output: String::new(),
@@ -96,62 +93,25 @@ mod component {
                 }
             };
 
-            let cfg = SnsConfig::from_section(&parsed.config);
-            let http_client = WakiHttpClient;
-            match resolve_domain(&parsed.domain, &cfg, &http_client) {
+            let rpc_url = parsed
+                .config
+                .get("rpc_url")
+                .filter(|v| !v.is_empty())
+                .cloned()
+                .unwrap_or_else(|| crate::resolve::DEFAULT_RPC_URL.to_string());
+
+            let client = RpcClient::new(&rpc_url);
+
+            match resolve_domain(&parsed.domain, &client) {
                 Ok(address) => {
-                    emit(
-                        PluginAction::Complete,
-                        PluginOutcome::Success,
-                        "resolved domain",
-                        None,
-                    );
-                    Ok(ToolResult {
-                        success: true,
-                        output: address,
-                        error: None,
-                    })
+                    emit(PluginAction::Complete, PluginOutcome::Success, "resolved domain", None);
+                    Ok(ToolResult { success: true, output: address, error: None })
                 }
                 Err(e) => {
-                    emit(
-                        PluginAction::Fail,
-                        PluginOutcome::Failure,
-                        "resolution failed",
-                        None,
-                    );
-                    Ok(ToolResult {
-                        success: false,
-                        output: String::new(),
-                        error: Some(e),
-                    })
+                    emit(PluginAction::Fail, PluginOutcome::Failure, "resolution failed", None);
+                    Ok(ToolResult { success: false, output: String::new(), error: Some(e) })
                 }
             }
-        }
-    }
-
-    struct WakiHttpClient;
-
-    impl crate::resolve::HttpClient for WakiHttpClient {
-        fn post(&self, url: &str, body: &str) -> Result<String, String> {
-            // Parse the body as JSON so waki can send it with its json() method.
-            let body_val: serde_json::Value = serde_json::from_str(body)
-                .map_err(|e| format!("invalid JSON body: {e}"))?;
-
-            let resp = waki::Client::new()
-                .post(url)
-                .header("Content-Type", "application/json")
-                .json(&body_val)
-                .send()
-                .map_err(|e| format!("http request failed: {e}"))?;
-
-            let status = resp.status_code();
-            // waki Response has no raw text() — only json() which parses the body.
-            let val: serde_json::Value = resp.json().map_err(|e| format!("read response body: {e}"))?;
-
-            if status != 200 {
-                return Err(format!("RPC returned status {status}: {val}"));
-            }
-            Ok(val.to_string())
         }
     }
 

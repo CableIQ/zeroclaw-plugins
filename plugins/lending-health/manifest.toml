@@ -1,0 +1,7 @@
+name = "lending-health"
+version = "0.1.0"
+description = "Monitor Kamino/MarginFi/Drift lending health factors and alert when below threshold"
+author = "ZeroClaw Labs"
+wasm_path = "lending_health.wasm"
+capabilities = ["tool"]
+permissions = ["config_read", "network"]

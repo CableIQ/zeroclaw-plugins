@@ -7,7 +7,8 @@
 //!
 //! The pure narration core lives in [`narrate`] with no wasm dependency, so it
 //! compiles and tests on the host with a plain `cargo test`; the wasm component
-//! reuses the exact same logic through this shim, using `waki` for HTTP calls.
+//! reuses the exact same logic through this shim, using `solana-client-wasip2`
+//! (which speaks `wasi:http` via `WakiTransport`) for RPC calls.
 //!
 //! Build:  rustup target add wasm32-wasip2
 //!         cargo build --target wasm32-wasip2 --release
@@ -24,9 +25,10 @@ mod component {
 
     use std::collections::HashMap;
 
-    use crate::narrate::{narrate_wallet, HttpClient, NarrateConfig, DEFAULT_RPC_URL};
+    use crate::narrate::{narrate_wallet, NarrateConfig, DEFAULT_RPC_URL};
     use exports::zeroclaw::plugin::plugin_info::Guest as PluginInfo;
     use exports::zeroclaw::plugin::tool::{Guest as Tool, ToolResult};
+    use solana_client_wasip2::RpcClient;
     use zeroclaw::plugin::logging::{
         log_record, LogLevel, PluginAction, PluginEvent, PluginOutcome,
     };
@@ -48,27 +50,6 @@ mod component {
 
     fn default_limit() -> u32 {
         10
-    }
-
-    /// Waki-based HTTP client used inside the wasm component.
-    struct WakiHttpClient;
-
-    impl HttpClient for WakiHttpClient {
-        fn post_json(&self, url: &str, body: &serde_json::Value) -> Result<serde_json::Value, String> {
-            let resp = waki::Client::new()
-                .post(url)
-                .json(body)
-                .send()
-                .map_err(|e| format!("http call error: {e}"))?;
-
-            let status = resp.status_code();
-            if status < 200 || status >= 300 {
-                return Err(format!("http status {status}"));
-            }
-
-            resp.json::<serde_json::Value>()
-                .map_err(|e| format!("json parse error: {e}"))
-        }
     }
 
     impl PluginInfo for WalletNarrate {
@@ -137,10 +118,11 @@ mod component {
                 .cloned()
                 .unwrap_or_else(|| DEFAULT_RPC_URL.to_string());
 
-            let cfg = NarrateConfig { rpc_url };
-            let http = WakiHttpClient;
+            // RpcClient::new creates a client with the default wasi:http transport
+            // (WakiTransport), which works inside the wasm component.
+            let client = RpcClient::new(rpc_url);
 
-            match narrate_wallet(&parsed.wallet, parsed.limit, &cfg, &http) {
+            match narrate_wallet(&parsed.wallet, parsed.limit, &client) {
                 Ok(output) => {
                     emit(
                         PluginAction::Complete,

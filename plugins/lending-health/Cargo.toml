@@ -1,9 +1,9 @@
 [package]
-name = "sns-resolve"
+name = "lending-health"
 version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-description = "ZeroClaw WIT plugin: resolve .sol domain names to Solana wallet addresses via the SNS (Solana Name Service) on-chain program."
+description = "ZeroClaw WIT plugin: monitor Kamino/MarginFi/Drift lending health factors"
 publish = false
 
 [lib]
